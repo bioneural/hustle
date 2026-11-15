@@ -13,7 +13,7 @@ export const meta = {
 
 const task = typeof args === 'string' ? args : args && args.task
 if (!task) {
-  throw new Error('boost needs a task. Example: Run /boost on: the duplicate-charge bug in ChargeInvoiceJob')
+  throw new Error('boost needs a task. Example: Run /boost on: the duplicate-charge bug in the payment job')
 }
 const MAX_ROUNDS = (args && typeof args === 'object' && args.maxRounds) || 6
 const CLEAN_ROUNDS_TO_STOP = 2

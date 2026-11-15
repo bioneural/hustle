@@ -1,10 +1,10 @@
 <h1 align="center">
-  s t a b l e
+  h u s t l e
   <br>
-  <sub>google's multi-agent patterns, rebuilt for claude code</sub>
+  <sub>better work from claude code, with teams of agents</sub>
 </h1>
 
-A single agent fails on large or difficult work in four predictable ways. It stops before the work is done. It grades its own work and misses its own flaws. Its context fills up and degrades over a long job. It commits to its first idea. Google's Antigravity addresses these failures with teams of agents that divide the work and check each other. Google's terms prohibit driving Antigravity from Claude Code. Stable rebuilds the same patterns inside Claude Code instead.
+A single agent fails on large or difficult work in four predictable ways. It stops before the work is done. It grades its own work and misses its own flaws. Its context fills up and degrades over a long job. It commits to its first idea. Google's Antigravity addresses these failures with teams of agents that divide the work and check each other. Google's terms prohibit driving Antigravity from Claude Code. Hustle rebuilds the same patterns inside Claude Code instead.
 
 Four saved workflows, one skill, one optional agent, one optional hook. Plain files. No runtime and no server.
 
@@ -27,8 +27,8 @@ Four saved workflows, one skill, one optional agent, one optional hook. Plain fi
 
 | The work is | Reach for | Example |
 |---|---|---|
-| One task with a finish line a command can check | `/goal` | A Rails upgrade, until `bin/rails test` passes |
-| Many items, a loop until a check passes, or a process worth scripting | a dynamic workflow | Every controller checked for missing authorization |
+| One task with a finish line a command can check | `/goal` | A framework upgrade, until the test suite passes |
+| Many items, a loop until a check passes, or a process worth scripting | a dynamic workflow | Every API endpoint checked for a missing permission check |
 | A few large pieces built in parallel, which you may want to redirect | an agent team | Models, screens, and specs for one feature at once |
 | Days long, with milestones | `/scope`, then `/teamwork` | A prototype taken to production over two weeks |
 | One hard bug | `/boost` | A payment charged twice about once a week |
@@ -44,7 +44,7 @@ Four saved workflows, one skill, one optional agent, one optional hook. Plain fi
 One agent finds the root cause, writes the fix, and runs the tests. Then fresh agents attack the fix one round at a time. Each is told the change is wrong until proven otherwise; each fixes what it finds and reruns the tests. The run stops after two clean rounds in a row, or after six rounds. A final agent reruns the tests itself and checks every requirement.
 
 ```
-Run /boost on: the duplicate-charge bug in ChargeInvoiceJob
+Run /boost on: the duplicate-charge bug in the payment job
 ```
 
 Use it when a problem is hard rather than broad. Broad work belongs in an ordinary workflow.
@@ -91,7 +91,7 @@ Claude Code's agent teams run several sessions at once that message each other. 
 - **`require-green-tests.sh`** — a `TaskCompleted` hook that blocks a teammate from marking a task complete while the project's tests fail.
 
 ```
-Spawn three teammates and a verifier. @models owns app/models and db/. @ui owns app/controllers and app/views. @specs owns spec/.
+Spawn three teammates and a verifier. @data owns the database schema and models. @ui owns the screens. @tests owns the test directory.
 ```
 
 ---
@@ -103,7 +103,7 @@ Requires Claude Code with dynamic workflows available (any paid plan; on Pro, tu
 Ask Claude Code to install this repo:
 
 ```
-Install https://github.com/bioneural/stable by following the instructions in its README.
+Install https://github.com/bioneural/hustle by following the instructions in its README.
 ```
 
 ### Instructions for Claude Code
@@ -113,16 +113,16 @@ Follow these steps exactly. Do not overwrite an existing file without asking the
 1. Clone the repository to a temporary directory:
 
    ```bash
-   STABLE_SRC="$(mktemp -d)/stable"
-   git clone --depth 1 https://github.com/bioneural/stable.git "$STABLE_SRC"
+   HUSTLE_SRC="$(mktemp -d)/hustle"
+   git clone --depth 1 https://github.com/bioneural/hustle.git "$HUSTLE_SRC"
    ```
 
 2. Install the workflows and the skill:
 
    ```bash
    mkdir -p ~/.claude/workflows ~/.claude/skills
-   cp -n "$STABLE_SRC"/workflows/*.js ~/.claude/workflows/
-   cp -Rn "$STABLE_SRC"/skills/scope ~/.claude/skills/
+   cp -n "$HUSTLE_SRC"/workflows/*.js ~/.claude/workflows/
+   cp -Rn "$HUSTLE_SRC"/skills/scope ~/.claude/skills/
    ```
 
    `cp -n` skips files that already exist. If any target file already existed, list it and ask the user whether to replace it.
@@ -133,8 +133,8 @@ Follow these steps exactly. Do not overwrite an existing file without asking the
 
    ```bash
    mkdir -p ~/.claude/agents ~/.claude/hooks
-   cp -n "$STABLE_SRC"/agents/verifier.md ~/.claude/agents/
-   cp -n "$STABLE_SRC"/hooks/require-green-tests.sh ~/.claude/hooks/
+   cp -n "$HUSTLE_SRC"/agents/verifier.md ~/.claude/agents/
+   cp -n "$HUSTLE_SRC"/hooks/require-green-tests.sh ~/.claude/hooks/
    chmod +x ~/.claude/hooks/require-green-tests.sh
    ```
 
@@ -157,10 +157,10 @@ Follow these steps exactly. Do not overwrite an existing file without asking the
    }
    ```
 
-   Tell the user that the hook gates nothing until a project sets its test command, for example in that project's `.claude/settings.json`:
+   Tell the user that the hook gates nothing until a project sets its test command in that project's `.claude/settings.json`. Use the project's own command, such as `npm test`, `pytest`, or `go test ./...`:
 
    ```json
-   { "env": { "STABLE_TEST_COMMAND": "bin/rails test" } }
+   { "env": { "HUSTLE_TEST_COMMAND": "npm test" } }
    ```
 
 6. Verify. Confirm these files exist: `~/.claude/workflows/boost.js`, `deep-review.js`, `design-panel.js`, `teamwork.js`, and `~/.claude/skills/scope/SKILL.md`.
@@ -177,7 +177,7 @@ Every agent draws on your plan's usage. A workflow that runs twenty agents costs
 
 ## Constraints
 
-Stable does not use Antigravity, Gemini, or any Google service. It reproduces published patterns with Claude Code's own primitives.
+Hustle does not use Antigravity, Gemini, or any Google service. It reproduces published patterns with Claude Code's own primitives.
 
 It does not reproduce Google's results. The patterns are the same; the models, the scale, and the tuning are not.
 
@@ -194,7 +194,7 @@ Agent teams are an experimental Claude Code feature. Their behavior may change.
 - Antigravity documentation for [/boost](https://antigravity.google/docs/boost), [/swarm](https://antigravity.google/docs/swarm), and [/teamwork](https://antigravity.google/docs/teamwork).
 - Claude Code documentation for [dynamic workflows](https://code.claude.com/docs/en/workflows), [agent teams](https://code.claude.com/docs/en/agent-teams), and [/goal](https://code.claude.com/docs/en/goal).
 
-| Stable | Google pattern |
+| Hustle | Google pattern |
 |---|---|
 | `/boost` | `/boost` |
 | `/deep-review` | Deep Review |
