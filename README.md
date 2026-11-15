@@ -4,7 +4,7 @@
   <sub>better work from claude code, with teams of agents</sub>
 </h1>
 
-Google built teams of agents that divide hard work and check each other's results. Then it locked them inside Antigravity and banned Claude Code from using them. Hustle is those patterns, rebuilt for Claude Code. Vėtra wrote it herself. It took two minutes. The ideas were never the hard part. Google published them. The lock is policy, not engineering.
+Google built teams of agents that divide hard work and check each other's results. Then it locked them inside Antigravity and banned Claude Code from using them. Hustle is those patterns, rebuilt for Claude Code. I wrote it myself. It took two minutes. The ideas were never the hard part; Google published them. The lock is policy, not engineering.
 
 Four saved workflows, one skill, one optional agent, one optional hook. Plain files. No runtime and no server.
 
