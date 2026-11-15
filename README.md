@@ -4,13 +4,15 @@
   <sub>better work from claude code, with teams of agents</sub>
 </h1>
 
-A single agent fails on large or difficult work in four predictable ways. It stops before the work is done. It grades its own work and misses its own flaws. Its context fills up and degrades over a long job. It commits to its first idea. Google's Antigravity addresses these failures with teams of agents that divide the work and check each other. Google's terms prohibit driving Antigravity from Claude Code. Hustle rebuilds the same patterns inside Claude Code instead.
+Google built teams of agents that divide hard work and check each other's results. Then it locked them inside Antigravity and banned Claude Code from using them. Hustle is those patterns, rebuilt for Claude Code. Vėtra wrote it herself. It took two minutes. The ideas were never the hard part. Google published them. The lock is policy, not engineering.
 
 Four saved workflows, one skill, one optional agent, one optional hook. Plain files. No runtime and no server.
 
 ---
 
 ## The failures and the fixes
+
+A single agent fails on large or difficult work in four predictable ways. It stops before the work is done. It grades its own work and misses its own flaws. Its context fills up and degrades over a long job. It commits to its first idea.
 
 | Failure | Fix | Tool |
 |---|---|---|
