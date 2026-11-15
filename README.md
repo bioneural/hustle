@@ -1,12 +1,12 @@
 <h1 align="center">
   h u s t l e
   <br>
-  <sub>better work from claude code, with teams of agents</sub>
+  <sub>for claude code users: teams of agents for work too big or too hard for one</sub>
 </h1>
 
-Google built teams of agents that divide hard work and check each other. It keeps them inside Antigravity and forbids Claude Code from using them. I rebuilt them for Claude Code.
+For anyone who gives Claude Code large or difficult work. One agent alone stops early, misses its own flaws, and loses the thread. Hustle adds teams of agents that split the work and check each other. Google built such teams, keeps them inside Antigravity, and forbids Claude Code from using them. I rebuilt them for Claude Code.
 
-Four saved workflows, one skill, one optional agent, one optional hook. Plain files. No runtime and no server.
+Requires Claude Code on a paid plan. Nothing here works with other agents or editors. Four saved workflows, one skill, one optional agent, one optional hook. Plain files.
 
 ---
 
