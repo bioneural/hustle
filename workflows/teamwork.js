@@ -60,6 +60,25 @@ Split the milestone into tracks. Each track lists every file it may create or ed
 Do not edit any files.`,
   { schema: PLAN, label: 'plan' },
 )
+if (!plan) throw new Error('The planner did not return a result. Nothing was built.')
+
+if (plan.status === 'next') {
+  const owners = new Map()
+  const shared = []
+  for (const t of plan.tracks) {
+    for (const f of t.files) {
+      if (owners.has(f) && owners.get(f) !== t.name) shared.push(`${f} (${owners.get(f)}, ${t.name})`)
+      owners.set(f, t.name)
+    }
+  }
+  if (!plan.tracks.length) {
+    plan.status = 'blocked'
+    plan.note = 'The planner returned no tracks.'
+  } else if (shared.length) {
+    plan.status = 'blocked'
+    plan.note = `The plan gave files to more than one track: ${shared.join('; ')}. Run /teamwork again.`
+  }
+}
 
 if (plan.status === 'blocked') {
   log(`Blocked: ${plan.note}`)
@@ -74,6 +93,7 @@ Rerun every acceptance criterion and every verification command in ${SPEC} yours
 Fail on anything that does not hold. Do not edit any files.`,
     { schema: GATE, label: 'final check' },
   )
+  if (!final) return { status: 'final check did not return', problems: [] }
   return { status: final.pass ? 'complete' : 'final check failed', problems: final.problems }
 }
 

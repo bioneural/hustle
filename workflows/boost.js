@@ -11,7 +11,14 @@ export const meta = {
 
 // MIT License — Copyright (c) 2026 Fort Asset LLC
 
-const task = typeof args === 'string' ? args : args && args.task
+// Claude may pass input as a string or as an object; accept either.
+const input = (keys) => {
+  if (typeof args === 'string') return args.trim() || undefined
+  if (!args || typeof args !== 'object') return undefined
+  const named = keys.map((k) => args[k]).find((v) => typeof v === 'string' && v.trim())
+  return named || Object.values(args).find((v) => typeof v === 'string' && v.trim())
+}
+const task = input(['task', 'bug', 'problem'])
 if (!task) {
   throw new Error('boost needs a task. Example: Run /boost on: the duplicate-charge bug in the payment job')
 }
@@ -68,6 +75,7 @@ const fix = await agent(
 Report the requirements, what you changed, and every command you ran with its real output.`,
   { schema: FIX, label: 'fix' },
 )
+if (!fix) throw new Error('The fix agent did not return a result. Nothing was attacked or verified.')
 
 phase('Attack')
 let summary = fix.summary
@@ -91,6 +99,10 @@ For every real flaw: fix it, then rerun the tests.
 Report each flaw you found (an empty list if none), and an updated summary of the change including every command you ran with its real output.`,
     { schema: ROUND, label: `attack ${round}` },
   )
+  if (!r) {
+    log(`Round ${round} did not return. Stopping the attack early.`)
+    break
+  }
   if (r.flaws.length) {
     clean = 0
     flawsFound += r.flaws.length

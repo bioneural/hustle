@@ -93,7 +93,7 @@ Claude Code's agent teams run several sessions at once that message each other. 
 - **`require-green-tests.sh`** — a `TaskCompleted` hook that blocks a teammate from marking a task complete while the project's tests fail.
 
 ```
-Spawn three teammates and a verifier. @data owns the database schema and models. @ui owns the screens. @tests owns the test directory.
+Spawn three teammates, plus a fourth using the verifier agent type. @data owns the database schema and models. @ui owns the screens. @tests owns the test directory.
 ```
 
 ---
@@ -191,6 +191,8 @@ Agent teams are an experimental Claude Code feature. Their behavior may change.
 
 ## Origin
 
+- [Antigravity FAQ](https://antigravity.google/docs/faq#why-cant-i-use-third-party-software-such-as-claude-code-openclaw-or-opencode-with-my-antigravity-login): "Using third-party software, tools, or services to access Antigravity is a violation of our Terms of Service." The question names Claude Code.
+- [Account disabled while using Claude Code](https://discuss.ai.google.dev/t/request-for-manual-review-antigravity-cli-account-disabled-while-using-claude-code/199182) — Google AI Developers Forum, November 2026.
 - [Advancing science and engineering with Antigravity's /teamwork](https://research.google/blog/advancing-science-engineering-with-antigravitys-teamwork-feature/) — Google Research, November 2026.
 - [Teamwork: when AI becomes a research partner](https://antigravity.google/blog/teamwork-when-ai-becomes-a-research-partner) — Antigravity blog, August 2026.
 - Antigravity documentation for [/boost](https://antigravity.google/docs/boost), [/swarm](https://antigravity.google/docs/swarm), and [/teamwork](https://antigravity.google/docs/teamwork).

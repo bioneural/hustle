@@ -10,7 +10,14 @@ export const meta = {
 
 // MIT License — Copyright (c) 2026 Fort Asset LLC
 
-const doc = typeof args === 'string' ? args : args && args.path
+// Claude may pass input as a string or as an object; accept either.
+const input = (keys) => {
+  if (typeof args === 'string') return args.trim() || undefined
+  if (!args || typeof args !== 'object') return undefined
+  const named = keys.map((k) => args[k]).find((v) => typeof v === 'string' && v.trim())
+  return named || Object.values(args).find((v) => typeof v === 'string' && v.trim())
+}
+const doc = input(['path', 'file', 'document'])
 if (!doc) {
   throw new Error('deep-review needs a document path. Example: Run /deep-review on proposal.md')
 }
@@ -76,7 +83,7 @@ Stay on your angle. For each finding, quote the exact text, state the problem, r
     ),
   (result, lens) =>
     parallel(
-      result.findings.map((f) => () =>
+      (result ? result.findings : []).map((f) => () =>
         agent(
           `A reviewer reported a problem in ${doc}. Try to refute it. Read the document and any sources it cites.
 

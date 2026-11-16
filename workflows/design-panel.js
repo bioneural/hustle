@@ -11,7 +11,14 @@ export const meta = {
 
 // MIT License — Copyright (c) 2026 Fort Asset LLC
 
-const question = typeof args === 'string' ? args : args && args.question
+// Claude may pass input as a string or as an object; accept either.
+const input = (keys) => {
+  if (typeof args === 'string') return args.trim() || undefined
+  if (!args || typeof args !== 'object') return undefined
+  const named = keys.map((k) => args[k]).find((v) => typeof v === 'string' && v.trim())
+  return named || Object.values(args).find((v) => typeof v === 'string' && v.trim())
+}
+const question = input(['question', 'topic'])
 if (!question) {
   throw new Error('design-panel needs a question. Example: Run /design-panel on: how to keep each customer\'s data separate')
 }
