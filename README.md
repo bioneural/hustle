@@ -219,6 +219,7 @@ Agent teams are an experimental Claude Code feature. Their behavior may change.
 | `skills/scope/SKILL.md` | Interview that writes `SPEC.md` |
 | `agents/verifier.md` | Optional verifier for agent teams |
 | `hooks/require-green-tests.sh` | Optional `TaskCompleted` hook that blocks completion while tests fail |
+| `docs/deck.html` | Slide deck: why one agent fails, Google's fixes, and when to reach for each command. Download and open in a browser; arrow keys move |
 | `README.md` | This document |
 
 ---
