@@ -1,7 +1,7 @@
 <h1 align="center">
   h u s t l e
   <br>
-  <sub>for claude code users: teams of agents for work too big or too hard for one</sub>
+  <sub>multi-agent workflows for claude code</sub>
 </h1>
 
 For anyone who gives Claude Code large or difficult work. One agent alone stops early, misses its own flaws, and loses the thread. Hustle adds teams of agents that split the work and check each other. Google built such teams, keeps them inside Antigravity, and forbids Claude Code from using them. I rebuilt them for Claude Code.
