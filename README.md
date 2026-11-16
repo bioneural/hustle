@@ -4,7 +4,7 @@
   <sub>multi-agent workflows for claude code</sub>
 </h1>
 
-For anyone who gives Claude Code large or difficult work. One agent alone stops early, misses its own flaws, and loses the thread. Hustle adds teams of agents that split the work and check each other. Google built such teams, keeps them inside Antigravity, and forbids Claude Code from using them. I rebuilt them for Claude Code.
+Google built teams of agents that split large work and check each other, but locked them inside Antigravity and doesn't let Claude Code call them. So I rebuilt them for Claude Code. Use them when one agent stops early, misses its own flaws, or loses the thread.
 
 Requires Claude Code on a paid plan. Nothing here works with other agents or editors. Four saved workflows, one skill, one optional agent, one optional hook. Plain files.
 
