@@ -5,8 +5,8 @@ export const meta = {
   phases: [
     { title: 'Plan', detail: 'a fresh agent picks the next milestone and splits it into tracks' },
     { title: 'Build', detail: 'one worker per track, each owning its own files' },
-    { title: 'Check', detail: 'a critic, a challenger, and an auditor' },
-    { title: 'Record', detail: 'progress and recurring mistakes are written down' },
+    { title: 'Check', detail: 'file ownership compared with git, then a critic, a challenger, and an auditor' },
+    { title: 'Record', detail: 'the result is appended to PROGRESS.md; recurring mistakes go to PITFALLS.md' },
   ],
 }
 
@@ -47,16 +47,50 @@ const GATE = {
   },
 }
 
+// The script cannot run git itself, so an agent runs one fixed command and reports its output.
+// The script, not the agent, compares the two snapshots with the plan.
+const SNAPSHOT = {
+  type: 'object',
+  required: ['head', 'files'],
+  properties: {
+    head: { type: 'string' },
+    files: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['path', 'hash'],
+        properties: {
+          path: { type: 'string' },
+          hash: { type: 'string' },
+        },
+      },
+    },
+  },
+}
+
+const snapshot = (label, phaseTitle) =>
+  agent(
+    `Run this exact command and report its output. Do not run anything else and do not edit any files.
+
+cd "$(git rev-parse --show-toplevel)" && { git rev-parse --verify -q HEAD || echo none; } && { git -c core.quotePath=false diff --name-only HEAD 2>/dev/null; git -c core.quotePath=false ls-files --others --exclude-standard; } | sort -u | while IFS= read -r f; do if [ -f "$f" ]; then printf '%s %s\\n' "$(git hash-object -- "$f" | cut -c1-12)" "$f"; else printf 'deleted %s\\n' "$f"; fi; done
+
+The first line of output is head. Every later line is one file: the first word is its hash and the rest of the line is its path. Copy each exactly. If there are no later lines, files is empty.`,
+    { schema: SNAPSHOT, label, phase: phaseTitle, effort: 'low' },
+  )
+
+const clean = (path) => path.replace(/^\.\//, '')
+
 phase('Plan')
 const plan = await agent(
   `Plan the next milestone of a project.
 
 Read ${SPEC}, ${PROGRESS} (it may not exist yet), and ${PITFALLS} (it may not exist yet).
 - If ${SPEC} does not exist, set status to "blocked" and say so in note.
-- If every milestone in ${SPEC} is recorded as passed in ${PROGRESS}, set status to "all_done".
-- Otherwise set status to "next". Pick the first milestone not yet passed. If its last attempt failed, the plan must address the recorded problems.
+Each attempt is recorded in ${PROGRESS} as an entry headed "## <milestone>" with a line "Result: PASSED" or "Result: FAILED". A milestone has passed only if its last entry says "Result: PASSED".
+- If every milestone in ${SPEC} has passed, set status to "all_done".
+- Otherwise set status to "next". Pick the first milestone not yet passed and name it exactly as ${SPEC} lists it. If its last attempt failed, the plan must address the recorded problems.
 
-Split the milestone into tracks. Each track lists every file it may create or edit. No file may appear in two tracks. Keep tracks few and substantial.
+Split the milestone into tracks. Each track lists every file it may create or edit, as a path relative to the repository root. No file may appear in two tracks. Keep tracks few and substantial.
 Do not edit any files.`,
   { schema: PLAN, label: 'plan' },
 )
@@ -67,8 +101,9 @@ if (plan.status === 'next') {
   const shared = []
   for (const t of plan.tracks) {
     for (const f of t.files) {
-      if (owners.has(f) && owners.get(f) !== t.name) shared.push(`${f} (${owners.get(f)}, ${t.name})`)
-      owners.set(f, t.name)
+      const path = clean(f)
+      if (owners.has(path) && owners.get(path) !== t.name) shared.push(`${path} (${owners.get(path)}, ${t.name})`)
+      owners.set(path, t.name)
     }
   }
   if (!plan.tracks.length) {
@@ -98,6 +133,10 @@ Fail on anything that does not hold. Do not edit any files.`,
 }
 
 phase('Build')
+const before = await snapshot('snapshot before build', 'Build')
+if (before && before.files.length) {
+  log(`${before.files.length} file(s) already had uncommitted changes before this milestone. Commit between runs to keep milestones apart.`)
+}
 const reports = await parallel(
   plan.tracks.map((t) => () =>
     agent(
@@ -117,7 +156,30 @@ Report what you built and every command you ran with its real output.`,
 )
 
 phase('Check')
-const ctx = `Milestone: "${plan.milestone}". Read ${SPEC}, including its acceptance criteria and off-limits shortcuts, and inspect the current uncommitted changes with git.`
+const after = await snapshot('snapshot after build', 'Check')
+
+// File ownership, decided here from the two snapshots.
+const owned = new Set(plan.tracks.flatMap((t) => t.files).map(clean))
+const ownership = []
+let changed = null
+if (!before || !after) {
+  ownership.push('The file ownership check did not run: a git snapshot did not return.')
+} else if (before.head !== after.head) {
+  ownership.push(`HEAD moved during the build (${before.head} to ${after.head}), so file ownership could not be checked. Workers must not commit or switch branches.`)
+} else {
+  const was = new Map(before.files.map((f) => [clean(f.path), f.hash]))
+  const now = new Map(after.files.map((f) => [clean(f.path), f.hash]))
+  changed = [...new Set([...was.keys(), ...now.keys()])].filter((p) => was.get(p) !== now.get(p)).sort()
+  for (const p of changed) {
+    if (!owned.has(p)) ownership.push(`${p} changed during the build but belongs to no track.`)
+  }
+}
+if (ownership.length) log(`File ownership: ${ownership.length} problem(s)`)
+
+const scope = changed
+  ? `The workers changed these files in this run: ${changed.join(', ') || 'none'}. Inspect those changes with git. Uncommitted changes to any other file predate this milestone.`
+  : 'Inspect the current uncommitted changes with git.'
+const ctx = `Milestone: "${plan.milestone}". Read ${SPEC}, including its acceptance criteria and off-limits shortcuts. ${scope}`
 const gates = await parallel([
   () =>
     agent(
@@ -143,19 +205,24 @@ Rerun every command the workers claim to have run and compare the output. Fail o
 ])
 
 const results = gates.filter(Boolean)
-const problems = results.flatMap((g) => g.problems)
-const passed = results.length === 3 && results.every((g) => g.pass)
+const problems = [...ownership, ...results.flatMap((g) => g.problems)]
+const passed = !ownership.length && results.length === 3 && results.every((g) => g.pass)
 if (results.length < 3) log(`${3 - results.length} check(s) did not return; the milestone is recorded as failed.`)
+
+// The script writes the entry; the agent only appends it. The planner reads the Result line.
+const entry = `## ${plan.milestone}
+Result: ${passed ? 'PASSED' : 'FAILED'}
+Problems:
+${problems.length ? problems.map((p) => `- ${p.replace(/\s*\n\s*/g, ' ')}`).join('\n') : '- none'}`
 
 phase('Record')
 await agent(
-  `Update ${PROGRESS} for milestone "${plan.milestone}". Create the file if it does not exist.
-Result: ${passed ? 'PASSED' : 'FAILED'}
-Problems to fix on the next run:
-${problems.length ? problems.map((p) => `- ${p}`).join('\n') : '- none'}
+  `Append the entry below to the end of ${PROGRESS}, exactly as written. Create the file if it does not exist. Do not reword the entry and do not change earlier entries.
+
+${entry}
 
 Then update ${PITFALLS}: add any problem that reflects a mistake likely to recur, phrased as a rule for future workers. Create the file if it does not exist. Edit only ${PROGRESS} and ${PITFALLS}.`,
   { label: 'record', phase: 'Record' },
 )
 
-return { status: passed ? 'milestone passed' : 'milestone failed', milestone: plan.milestone, problems }
+return { status: passed ? 'milestone passed' : 'milestone failed', milestone: plan.milestone, problems, record: entry }

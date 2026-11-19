@@ -43,7 +43,7 @@ A single agent fails on large or difficult work in four predictable ways. It sto
 
 ### `/boost`
 
-One agent finds the root cause, writes the fix, and runs the tests. Then fresh agents attack the fix one round at a time. Each is told the change is wrong until proven otherwise; each fixes what it finds and reruns the tests. The run stops after two clean rounds in a row, or after six rounds. A final agent reruns the tests itself and checks every requirement.
+One agent finds the root cause, writes the fix, and runs the tests. Then fresh agents attack the fix one round at a time. Each is told the change is wrong until proven otherwise; each fixes what it finds and reruns the tests. The attack stops after two clean rounds in a row, or after six rounds. A final agent reruns the tests itself and checks the task and every requirement. If it fails the change, the attack reopens with its evidence, within the same six-round limit. The result states `verified`, `failed verification`, or `not verified`.
 
 ```
 Run /boost on: the duplicate-charge bug in the payment job
@@ -53,7 +53,7 @@ Use it when a problem is hard rather than broad. Broad work belongs in an ordina
 
 ### `/deep-review`
 
-Four reviewers read a document, each from one angle: facts, logic, what is missing, and where a reader stalls. A skeptic then tries to refute every finding. Only findings that survive are reported, ranked by severity.
+Four reviewers read a document, each from one angle: facts, logic, what is missing, and where a reader stalls. A skeptic then tries to refute every finding. Findings that survive are reported, ranked by severity. Refuted findings are listed apart with the skeptic's reason, as are any the skeptic did not check.
 
 ```
 Run /deep-review on proposal.md
@@ -61,7 +61,7 @@ Run /deep-review on proposal.md
 
 ### `/design-panel`
 
-Three agents propose rival answers to a design question: the simplest design that works, the safest, and the easiest to change later. A falsifier attacks each proposal. A final agent picks the strongest proposal with no fatal objection, borrows the best ideas from the others, and lists the risks that remain.
+Three agents propose rival answers to a design question: the simplest design that works, the safest, and the easiest to change later. A falsifier attacks each proposal. A final agent picks the strongest proposal with no fatal objection, borrows the best ideas from the others, and lists the risks that remain. If every proposal has a fatal objection, the run says so and picks none.
 
 ```
 Run /design-panel on: how to keep each customer's data separate
@@ -75,10 +75,10 @@ Run /design-panel on: how to keep each customer's data separate
 
 1. **Plan.** A fresh agent reads `SPEC.md`, `PROGRESS.md`, and `PITFALLS.md`, picks the next milestone, and splits it into tracks. No file belongs to two tracks.
 2. **Build.** One worker per track, in parallel. Each edits only its own files.
-3. **Check.** A critic reviews the code. A challenger writes adversarial tests. An auditor reruns every command the workers claim to have run.
-4. **Record.** The result and its problems go to `PROGRESS.md`. Mistakes likely to recur go to `PITFALLS.md` as rules for future workers.
+3. **Check.** The script compares the files git reports as changed during the build with the plan; a changed file that belongs to no track fails the milestone. A critic reviews the code. A challenger writes adversarial tests. An auditor reruns every command the workers claim to have run.
+4. **Record.** The script writes the result and its problems as an entry that is appended to `PROGRESS.md`; the next plan reads its `Result:` line. Mistakes likely to recur go to `PITFALLS.md` as rules for future workers.
 
-You review the result between runs. A failed milestone is retried on the next run, with its recorded problems in the plan. When every milestone has passed, the next run performs a final check against every acceptance criterion.
+You review the result between runs. Commit what you accept, so the next run's checks see only its own changes. `/teamwork` needs a git repository; files that tests generate must be in `.gitignore`, or they count as changed. A failed milestone is retried on the next run, with its recorded problems in the plan. When every milestone has passed, the next run performs a final check against every acceptance criterion.
 
 ```
 /scope a client portal for invoices and payments

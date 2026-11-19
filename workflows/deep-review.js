@@ -78,7 +78,7 @@ const reviewed = await pipeline(
 
 Your angle: ${lens.prompt}
 
-Stay on your angle. For each finding, quote the exact text, state the problem, rate its severity, and propose a fix. Report nothing you are unsure is real. Do not edit any files.`,
+Stay on your angle. For each finding, quote the exact text, state the problem, rate its severity, and propose a fix. Report only findings you can support from the quoted text; a skeptic will try to refute each one. Do not edit any files.`,
       { schema: FINDINGS, label: `review: ${lens.key}`, phase: 'Review' },
     ),
   (result, lens) =>
@@ -99,10 +99,17 @@ The finding is refuted if the problem is not real, is already addressed elsewher
 
 const all = reviewed.filter(Boolean).flat().filter(Boolean)
 const RANK = { high: 0, medium: 1, low: 2 }
-const survivors = all.filter((f) => f.verdict && !f.verdict.refuted).sort((a, b) => RANK[a.severity] - RANK[b.severity])
-log(`${all.length} finding(s) reported, ${all.length - survivors.length} refuted, ${survivors.length} kept`)
+const bySeverity = (a, b) => RANK[a.severity] - RANK[b.severity]
+const survivors = all.filter((f) => f.verdict && !f.verdict.refuted).sort(bySeverity)
+const refuted = all.filter((f) => f.verdict && f.verdict.refuted).sort(bySeverity)
+// A skeptic that did not return has refuted nothing. Keep its finding apart from both lists.
+const unchecked = all.filter((f) => !f.verdict).sort(bySeverity)
+log(`${all.length} finding(s) reported, ${refuted.length} refuted, ${unchecked.length} not checked, ${survivors.length} kept`)
 
+const shape = (f) => ({ severity: f.severity, lens: f.lens, quote: f.quote, problem: f.problem, fix: f.fix })
 return {
   document: doc,
-  findings: survivors.map((f) => ({ severity: f.severity, lens: f.lens, quote: f.quote, problem: f.problem, fix: f.fix })),
+  findings: survivors.map(shape),
+  refuted: refuted.map((f) => ({ ...shape(f), reason: f.verdict.reason })),
+  unchecked: unchecked.map(shape),
 }
