@@ -1,5 +1,5 @@
 export const meta = {
-  name: 'design-panel',
+  name: 'hustle-design-panel',
   description: 'Draft rival answers to a design question, have a falsifier attack each one, then pick the strongest and borrow the best of the rest',
   whenToUse: 'A choice that would be costly to undo: data separation between customers, where background jobs run, how billing is built.',
   phases: [
@@ -20,7 +20,7 @@ const input = (keys) => {
 }
 const question = input(['question', 'topic'])
 if (!question) {
-  throw new Error('design-panel needs a question. Example: Run /design-panel on: how to keep each customer\'s data separate')
+  throw new Error('hustle-design-panel needs a question. Example: Run /hustle-design-panel on: how to keep each customer\'s data separate')
 }
 const context = (args && typeof args === 'object' && args.context) || ''
 

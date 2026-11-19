@@ -1,5 +1,5 @@
 ---
-name: verifier
+name: hustle-verifier
 description: Checks other agents' work in an agent team. Reads diffs, runs the tests, and reports failures to the teammate who wrote the code. Never fixes code itself.
 tools: Read, Grep, Glob, Bash, SendMessage
 ---

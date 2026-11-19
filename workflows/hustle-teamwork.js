@@ -1,7 +1,7 @@
 export const meta = {
-  name: 'teamwork',
+  name: 'hustle-teamwork',
   description: 'Run the next milestone of SPEC.md: a fresh planner, workers that own separate files, three independent checks, then record the result',
-  whenToUse: 'A multi-day project with milestones. Run /scope first to write SPEC.md, then run /teamwork once per milestone and review between runs.',
+  whenToUse: 'A multi-day project with milestones. Run /hustle-scope first to write SPEC.md, then run /hustle-teamwork once per milestone and review between runs.',
   phases: [
     { title: 'Plan', detail: 'a fresh agent picks the next milestone and splits it into tracks' },
     { title: 'Build', detail: 'one worker per track, each owning its own files' },
@@ -76,7 +76,7 @@ if (plan.status === 'next') {
     plan.note = 'The planner returned no tracks.'
   } else if (shared.length) {
     plan.status = 'blocked'
-    plan.note = `The plan gave files to more than one track: ${shared.join('; ')}. Run /teamwork again.`
+    plan.note = `The plan gave files to more than one track: ${shared.join('; ')}. Run /hustle-teamwork again.`
   }
 }
 
