@@ -1,5 +1,5 @@
 export const meta = {
-  name: 'boost',
+  name: 'hustle-boost',
   description: 'Fix one hard bug, then have fresh agents attack the fix in rounds until two rounds in a row find nothing',
   whenToUse: 'One hard, tangled problem: a race condition, an intermittent failure, a delicate refactor. Not broad work.',
   phases: [
@@ -20,7 +20,7 @@ const input = (keys) => {
 }
 const task = input(['task', 'bug', 'problem'])
 if (!task) {
-  throw new Error('boost needs a task. Example: Run /boost on: the duplicate-charge bug in the payment job')
+  throw new Error('hustle-boost needs a task. Example: Run /hustle-boost on: the duplicate-charge bug in the payment job')
 }
 const MAX_ROUNDS = (args && typeof args === 'object' && args.maxRounds) || 6
 const CLEAN_ROUNDS_TO_STOP = 2

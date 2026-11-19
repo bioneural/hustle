@@ -1,5 +1,5 @@
 export const meta = {
-  name: 'deep-review',
+  name: 'hustle-deep-review',
   description: 'Review a document from four angles, then have a skeptic try to refute every finding; report only the survivors',
   whenToUse: 'A proposal, spec, design doc, or essay is about to go out.',
   phases: [
@@ -19,7 +19,7 @@ const input = (keys) => {
 }
 const doc = input(['path', 'file', 'document'])
 if (!doc) {
-  throw new Error('deep-review needs a document path. Example: Run /deep-review on proposal.md')
+  throw new Error('hustle-deep-review needs a document path. Example: Run /hustle-deep-review on proposal.md')
 }
 
 const LENSES = [
