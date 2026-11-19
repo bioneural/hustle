@@ -5,7 +5,7 @@ export const meta = {
   phases: [
     { title: 'Fix', detail: 'one agent finds the root cause, writes the fix, runs the tests' },
     { title: 'Attack', detail: 'fresh agents try to break the fix, one round at a time' },
-    { title: 'Verify', detail: 'one agent reruns the tests and checks each requirement' },
+    { title: 'Verify', detail: 'one agent reruns the tests and checks the task and each requirement; a failure reopens the attack' },
   ],
 }
 
@@ -45,9 +45,10 @@ const ROUND = {
 
 const VERDICT = {
   type: 'object',
-  required: ['passed', 'requirements'],
+  required: ['taskSolved', 'taskEvidence', 'requirements'],
   properties: {
-    passed: { type: 'boolean' },
+    taskSolved: { type: 'boolean' },
+    taskEvidence: { type: 'string' },
     requirements: {
       type: 'array',
       items: {
@@ -77,18 +78,20 @@ Report the requirements, what you changed, and every command you ran with its re
 )
 if (!fix) throw new Error('The fix agent did not return a result. Nothing was attacked or verified.')
 
-phase('Attack')
 let summary = fix.summary
 let clean = 0
 let round = 0
 let flawsFound = 0
-while (clean < CLEAN_ROUNDS_TO_STOP && round < MAX_ROUNDS) {
-  round++
-  const r = await agent(
-    `You did not write the change described below. Assume it is wrong until you prove otherwise.
+let verdict = null
+let verified = false
+while (true) {
+  while (clean < CLEAN_ROUNDS_TO_STOP && round < MAX_ROUNDS) {
+    round++
+    const r = await agent(
+      `You did not write the change described below. Assume it is wrong until you prove otherwise.
 
 Task: ${task}
-Requirements:
+Requirements, as listed by the agent that wrote the first fix. Check them against the task; a requirement the task implies but the list omits is a flaw.
 ${fix.requirements.map((q) => `- ${q}`).join('\n')}
 
 Current state of the change:
@@ -97,35 +100,54 @@ ${summary}
 Attack it. Look for edge cases, concurrency problems, failure paths, worst-case inputs, and requirements it does not meet. Read the actual diff and code; do not trust the summary.
 For every real flaw: fix it, then rerun the tests.
 Report each flaw you found (an empty list if none), and an updated summary of the change including every command you ran with its real output.`,
-    { schema: ROUND, label: `attack ${round}` },
-  )
-  if (!r) {
-    log(`Round ${round} did not return. Stopping the attack early.`)
-    break
+      { schema: ROUND, label: `attack ${round}`, phase: 'Attack' },
+    )
+    if (!r) {
+      log(`Round ${round} did not return. Stopping the attack early.`)
+      break
+    }
+    if (r.flaws.length) {
+      clean = 0
+      flawsFound += r.flaws.length
+      summary = r.summary
+    } else {
+      clean++
+    }
+    log(`Round ${round}: ${r.flaws.length} flaw(s) found`)
   }
-  if (r.flaws.length) {
-    clean = 0
-    flawsFound += r.flaws.length
-    summary = r.summary
-  } else {
-    clean++
+  if (clean < CLEAN_ROUNDS_TO_STOP && round >= MAX_ROUNDS) {
+    log(`Stopped at the ${MAX_ROUNDS}-round limit before two clean rounds in a row. Treat the result with caution.`)
   }
-  log(`Round ${round}: ${r.flaws.length} flaw(s) found`)
-}
-if (clean < CLEAN_ROUNDS_TO_STOP) {
-  log(`Stopped at the ${MAX_ROUNDS}-round limit before two clean rounds in a row. Treat the result with caution.`)
-}
 
-phase('Verify')
-const verdict = await agent(
-  `Verify a bug fix. Do not trust earlier reports: rerun the tests yourself and read the code.
+  verdict = await agent(
+    `Verify a bug fix. Do not trust earlier reports: rerun the tests yourself and read the code.
 
 Task: ${task}
-Check each requirement and give pass or fail with evidence from real command output or code:
+First judge the task itself, apart from the list below: does the change solve it? The list was written by the agent that wrote the fix and may be incomplete.
+Then check each requirement and give pass or fail with evidence from real command output or code:
 ${fix.requirements.map((q) => `- ${q}`).join('\n')}
 
 Do not edit any files.`,
-  { schema: VERDICT, label: 'verify' },
-)
+    { schema: VERDICT, label: 'verify', phase: 'Verify' },
+  )
+  if (!verdict) break
 
-return { task, rounds: round, flawsFound, stoppedClean: clean >= CLEAN_ROUNDS_TO_STOP, verdict }
+  // The script decides the result from the verifier's per-item answers.
+  const failures = verdict.requirements.filter((q) => !q.passed).map((q) => `${q.requirement}: ${q.evidence}`)
+  if (!verdict.taskSolved) failures.unshift(`The task itself is not solved: ${verdict.taskEvidence}`)
+  if (verdict.requirements.length < fix.requirements.length) {
+    failures.push(`The verifier checked ${verdict.requirements.length} of ${fix.requirements.length} requirements.`)
+  }
+  verified = failures.length === 0
+  if (verified || round >= MAX_ROUNDS) break
+
+  log(`Verification failed on ${failures.length} point(s). Reopening the attack.`)
+  summary = `${summary}
+
+An independent verifier then failed the change on these points:
+${failures.map((f) => `- ${f}`).join('\n')}`
+  clean = 0
+}
+
+const status = verified ? 'verified' : verdict ? 'failed verification' : 'not verified'
+return { task, status, rounds: round, flawsFound, stoppedClean: clean >= CLEAN_ROUNDS_TO_STOP, verdict }
