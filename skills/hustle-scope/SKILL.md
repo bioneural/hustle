@@ -1,13 +1,13 @@
 ---
-name: scope
-description: Interview the user one question at a time and write SPEC.md for a multi-day project, with a check for every requirement. Run before /teamwork.
+name: hustle-scope
+description: Interview the user one question at a time and write SPEC.md for a multi-day project, with a check for every requirement. Run before /hustle-teamwork.
 argument-hint: "[what you want built]"
 disable-model-invocation: true
 ---
 
-# scope
+# hustle-scope
 
-Write `SPEC.md` for a project that will be built milestone by milestone with `/teamwork`. The spec states what, not how. Every requirement carries a check that proves it.
+Write `SPEC.md` for a project that will be built milestone by milestone with `/hustle-teamwork`. The spec states what, not how. Every requirement carries a check that proves it.
 
 ## Interview
 
@@ -72,4 +72,4 @@ No milestones attempted yet.
 Rules learned from failed milestones. Every worker reads this file first.
 ```
 
-Then tell the user the next step: run `/teamwork` to build the first milestone, and review the result before running it again.
+Then tell the user the next step: run `/hustle-teamwork` to build the first milestone, and review the result before running it again.

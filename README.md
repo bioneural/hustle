@@ -17,9 +17,9 @@ A single agent fails on large or difficult work in four predictable ways. It sto
 | Failure | Fix | Tool |
 |---|---|---|
 | Stops too early | A separate judge decides when the work is done | `/goal` (built into Claude Code) |
-| Grades its own work | Fresh agents try to break the result | `/boost`, `/deep-review` |
-| Context fills up and degrades | The work is split; each agent starts with a clean context | dynamic workflows and agent teams (built into Claude Code), `/teamwork` |
-| Commits to its first idea | Rival ideas compete | `/design-panel` |
+| Grades its own work | Fresh agents try to break the result | `/hustle-boost`, `/hustle-deep-review` |
+| Context fills up and degrades | The work is split; each agent starts with a clean context | dynamic workflows and agent teams (built into Claude Code), `/hustle-teamwork` |
+| Commits to its first idea | Rival ideas compete | `/hustle-design-panel` |
 
 `/goal`, dynamic workflows, and agent teams ship with Claude Code. This repo adds the rest. Each added command is a saved dynamic workflow: a script that coordinates subagents in the background and returns one result.
 
@@ -32,68 +32,68 @@ A single agent fails on large or difficult work in four predictable ways. It sto
 | One task with a finish line a command can check | `/goal` | A framework upgrade, until the test suite passes |
 | Many items, a loop until a check passes, or a process worth scripting | a dynamic workflow | Every API endpoint checked for a missing permission check |
 | A few large pieces built in parallel, which you may want to redirect | an agent team | Models, screens, and specs for one feature at once |
-| Days long, with milestones | `/scope`, then `/teamwork` | A prototype taken to production over two weeks |
-| One hard bug | `/boost` | A payment charged twice about once a week |
-| A choice that would be costly to undo | `/design-panel` | How to keep each customer's data separate |
-| A document about to go out | `/deep-review` | A proposal or spec before the client sees it |
+| Days long, with milestones | `/hustle-scope`, then `/hustle-teamwork` | A prototype taken to production over two weeks |
+| One hard bug | `/hustle-boost` | A payment charged twice about once a week |
+| A choice that would be costly to undo | `/hustle-design-panel` | How to keep each customer's data separate |
+| A document about to go out | `/hustle-deep-review` | A proposal or spec before the client sees it |
 
 ---
 
 ## Commands
 
-### `/boost`
+### `/hustle-boost`
 
-One agent finds the root cause, writes the fix, and runs the tests. Then fresh agents attack the fix one round at a time. Each is told the change is wrong until proven otherwise; each fixes what it finds and reruns the tests. The run stops after two clean rounds in a row, or after six rounds. A final agent reruns the tests itself and checks every requirement.
+One agent finds the root cause, writes the fix, and runs the tests. Then fresh agents attack the fix one round at a time. Each is told the change is wrong until proven otherwise; each classes every flaw it finds as blocking or follow-up against a shared bar, fixes the blocking ones, and reruns the tests. A round with only follow-up flaws counts as clean, and follow-ups are returned unfixed. The attack stops after two clean rounds in a row, or after six rounds. A final agent reruns the tests itself and checks the task and every requirement. If it fails the change, the attack reopens with its evidence, within the same six-round limit. The result states `verified`, `failed verification`, or `not verified`.
 
 ```
-Run /boost on: the duplicate-charge bug in the payment job
+Run /hustle-boost on: the duplicate-charge bug in the payment job
 ```
 
 Use it when a problem is hard rather than broad. Broad work belongs in an ordinary workflow.
 
-### `/deep-review`
+### `/hustle-deep-review`
 
-Four reviewers read a document, each from one angle: facts, logic, what is missing, and where a reader stalls. A skeptic then tries to refute every finding. Only findings that survive are reported, ranked by severity.
-
-```
-Run /deep-review on proposal.md
-```
-
-### `/design-panel`
-
-Three agents propose rival answers to a design question: the simplest design that works, the safest, and the easiest to change later. A falsifier attacks each proposal. A final agent picks the strongest proposal with no fatal objection, borrows the best ideas from the others, and lists the risks that remain.
+Four reviewers read a document, each from one angle: facts, logic, what is missing, and where a reader stalls. When all four are done, findings that quote the same text are merged into one, listing every angle that found it. A skeptic then tries to refute each merged finding, so one problem costs one skeptic. Reviewers and the skeptic share one definition of severity; the skeptic can lower a finding's severity but not raise it. Findings that survive are reported, ranked by severity. Refuted findings are listed apart with the skeptic's reason, as are any the skeptic did not check.
 
 ```
-Run /design-panel on: how to keep each customer's data separate
+Run /hustle-deep-review on proposal.md
 ```
 
-### `/scope` and `/teamwork`
+### `/hustle-design-panel`
 
-`/scope` interviews you one question at a time and writes `SPEC.md`: the goal, the requirements, a command that proves each requirement, acceptance criteria, off-limits shortcuts, and an ordered list of milestones.
+Three agents propose rival answers to a design question: the simplest design that works, the safest, and the easiest to change later. A falsifier attacks each proposal. A final agent picks the strongest proposal with no fatal objection, borrows the best ideas from the others, and lists the risks that remain. If every proposal has a fatal objection, the run says so and picks none.
 
-`/teamwork` builds one milestone per run:
+```
+Run /hustle-design-panel on: how to keep each customer's data separate
+```
+
+### `/hustle-scope` and `/hustle-teamwork`
+
+`/hustle-scope` interviews you one question at a time and writes `SPEC.md`: the goal, the requirements, a command that proves each requirement, acceptance criteria, off-limits shortcuts, and an ordered list of milestones.
+
+`/hustle-teamwork` builds one milestone per run:
 
 1. **Plan.** A fresh agent reads `SPEC.md`, `PROGRESS.md`, and `PITFALLS.md`, picks the next milestone, and splits it into tracks. No file belongs to two tracks.
 2. **Build.** One worker per track, in parallel. Each edits only its own files.
-3. **Check.** A critic reviews the code. A challenger writes adversarial tests. An auditor reruns every command the workers claim to have run.
-4. **Record.** The result and its problems go to `PROGRESS.md`. Mistakes likely to recur go to `PITFALLS.md` as rules for future workers.
+3. **Check.** The script compares the files git reports as changed during the build with the plan; a changed file that belongs to no track fails the milestone. A critic reviews the code. A challenger writes adversarial tests. An auditor reruns every command the workers claim to have run. Each check classes its problems as blocking or follow-up against a shared bar; only blocking problems fail the milestone, and follow-ups are recorded.
+4. **Record.** The script writes the result and its problems as an entry that is appended to `PROGRESS.md`; the next plan reads its `Result:` line. Mistakes likely to recur go to `PITFALLS.md` as rules for future workers.
 
-You review the result between runs. A failed milestone is retried on the next run, with its recorded problems in the plan. When every milestone has passed, the next run performs a final check against every acceptance criterion.
+You review the result between runs. Commit what you accept, so the next run's checks see only its own changes. `/teamwork` needs a git repository; files that tests generate must be in `.gitignore`, or they count as changed. A failed milestone is retried on the next run, with its recorded problems in the plan. When every milestone has passed, the next run performs a final check against every acceptance criterion.
 
 ```
-/scope a client portal for invoices and payments
-/teamwork
+/hustle-scope a client portal for invoices and payments
+/hustle-teamwork
 ```
 
 ### Agent team extras
 
 Claude Code's agent teams run several sessions at once that message each other. Each teammate appears in a panel under your prompt; select one to read its work and message it. Two optional extras add the discipline of Google's `/swarm`:
 
-- **`verifier`** — an agent that reads diffs, runs the tests, and reports failures to the teammate responsible. It never edits code.
+- **`hustle-verifier`** — an agent that reads diffs, runs the tests, and reports failures to the teammate responsible. It blocks only problems it can prove, that cite what they break and are worth fixing; the rest it reports as follow-ups. It never edits code.
 - **`require-green-tests.sh`** — a `TaskCompleted` hook that blocks a teammate from marking a task complete while the project's tests fail.
 
 ```
-Spawn three teammates, plus a fourth using the verifier agent type. @data owns the database schema and models. @ui owns the screens. @tests owns the test directory.
+Spawn three teammates, plus a fourth using the hustle-verifier agent type. @data owns the database schema and models. @ui owns the screens. @tests owns the test directory.
 ```
 
 ---
@@ -124,18 +124,18 @@ Follow these steps exactly. Do not overwrite an existing file without asking the
    ```bash
    mkdir -p ~/.claude/workflows ~/.claude/skills
    cp -n "$HUSTLE_SRC"/workflows/*.js ~/.claude/workflows/
-   cp -Rn "$HUSTLE_SRC"/skills/scope ~/.claude/skills/
+   cp -Rn "$HUSTLE_SRC"/skills/hustle-scope ~/.claude/skills/
    ```
 
    `cp -n` skips files that already exist. If any target file already existed, list it and ask the user whether to replace it.
 
 3. Ask the user whether they want the agent team extras. If not, skip to step 6.
 
-4. Install the verifier agent and the hook:
+4. Install the hustle-verifier agent and the hook:
 
    ```bash
    mkdir -p ~/.claude/agents ~/.claude/hooks
-   cp -n "$HUSTLE_SRC"/agents/verifier.md ~/.claude/agents/
+   cp -n "$HUSTLE_SRC"/agents/hustle-verifier.md ~/.claude/agents/
    cp -n "$HUSTLE_SRC"/hooks/require-green-tests.sh ~/.claude/hooks/
    chmod +x ~/.claude/hooks/require-green-tests.sh
    ```
@@ -165,9 +165,9 @@ Follow these steps exactly. Do not overwrite an existing file without asking the
    { "env": { "HUSTLE_TEST_COMMAND": "npm test" } }
    ```
 
-6. Verify. Confirm these files exist: `~/.claude/workflows/boost.js`, `deep-review.js`, `design-panel.js`, `teamwork.js`, and `~/.claude/skills/scope/SKILL.md`.
+6. Verify. Confirm these files exist: `~/.claude/workflows/hustle-boost.js`, `hustle-deep-review.js`, `hustle-design-panel.js`, `hustle-teamwork.js`, and `~/.claude/skills/hustle-scope/SKILL.md`.
 
-7. Remove the temporary clone, then tell the user to run `/reload-skills` or restart Claude Code. The new commands are `/boost`, `/deep-review`, `/design-panel`, `/scope`, and `/teamwork`.
+7. Remove the temporary clone, then tell the user to run `/reload-skills` or restart Claude Code. The new commands are `/hustle-boost`, `/hustle-deep-review`, `/hustle-design-panel`, `/hustle-scope`, and `/hustle-teamwork`.
 
 ---
 
@@ -200,10 +200,10 @@ Agent teams are an experimental Claude Code feature. Their behavior may change.
 
 | Hustle | Google pattern |
 |---|---|
-| `/boost` | `/boost` |
-| `/deep-review` | Deep Review |
-| `/design-panel` | Long Proof |
-| `/scope`, `/teamwork` | `/teamwork` |
+| `/hustle-boost` | `/boost` |
+| `/hustle-deep-review` | Deep Review |
+| `/hustle-design-panel` | Long Proof |
+| `/hustle-scope`, `/hustle-teamwork` | `/teamwork` |
 | agent team extras | `/swarm` |
 
 ---
@@ -212,12 +212,12 @@ Agent teams are an experimental Claude Code feature. Their behavior may change.
 
 | Path | Function |
 |---|---|
-| `workflows/boost.js` | Fix, then rounds of fresh attackers, then verification |
-| `workflows/deep-review.js` | Four reviewers by angle; a skeptic refutes each finding |
-| `workflows/design-panel.js` | Rival designs, each attacked, then a decision |
-| `workflows/teamwork.js` | One milestone per run: plan, build, check, record |
-| `skills/scope/SKILL.md` | Interview that writes `SPEC.md` |
-| `agents/verifier.md` | Optional verifier for agent teams |
+| `workflows/hustle-boost.js` | Fix, then rounds of fresh attackers, then verification |
+| `workflows/hustle-deep-review.js` | Four reviewers by angle; duplicates merged; a skeptic refutes each finding |
+| `workflows/hustle-design-panel.js` | Rival designs, each attacked, then a decision |
+| `workflows/hustle-teamwork.js` | One milestone per run: plan, build, check, record |
+| `skills/hustle-scope/SKILL.md` | Interview that writes `SPEC.md` |
+| `agents/hustle-verifier.md` | Optional verifier for agent teams |
 | `hooks/require-green-tests.sh` | Optional `TaskCompleted` hook that blocks completion while tests fail |
 | `docs/deck.html` | Slide deck: why one agent fails, Google's fixes, and when to reach for each command. Download and open in a browser; arrow keys move |
 | `README.md` | This document |

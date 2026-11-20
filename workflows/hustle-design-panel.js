@@ -1,5 +1,5 @@
 export const meta = {
-  name: 'design-panel',
+  name: 'hustle-design-panel',
   description: 'Draft rival answers to a design question, have a falsifier attack each one, then pick the strongest and borrow the best of the rest',
   whenToUse: 'A choice that would be costly to undo: data separation between customers, where background jobs run, how billing is built.',
   phases: [
@@ -20,7 +20,7 @@ const input = (keys) => {
 }
 const question = input(['question', 'topic'])
 if (!question) {
-  throw new Error('design-panel needs a question. Example: Run /design-panel on: how to keep each customer\'s data separate')
+  throw new Error('hustle-design-panel needs a question. Example: Run /hustle-design-panel on: how to keep each customer\'s data separate')
 }
 const context = (args && typeof args === 'object' && args.context) || ''
 
@@ -49,18 +49,6 @@ const ATTACK = {
   },
 }
 
-const DECISION = {
-  type: 'object',
-  required: ['choice', 'why', 'borrowed', 'risks', 'nextSteps'],
-  properties: {
-    choice: { type: 'string' },
-    why: { type: 'string' },
-    borrowed: { type: 'array', items: { type: 'string' } },
-    risks: { type: 'array', items: { type: 'string' } },
-    nextSteps: { type: 'array', items: { type: 'string' } },
-  },
-}
-
 const contested = await pipeline(
   ANGLES,
   (angle) =>
@@ -85,6 +73,34 @@ List every serious objection: failure modes, hidden costs, migration pain, secur
 )
 
 const entries = contested.filter(Boolean)
+if (!entries.length) throw new Error('No proposal returned a result. Nothing was decided.')
+
+// fatal is null when the falsifier did not return: the design was never attacked.
+const considered = entries.map((e) => ({
+  name: e.proposal.name,
+  angle: e.angle,
+  fatal: e.attack ? e.attack.fatal : null,
+  objections: e.attack ? e.attack.objections : [],
+}))
+const viable = entries.filter((e) => !e.attack || !e.attack.fatal)
+if (!viable.length) {
+  log('Every proposal has a fatal objection. No design was picked.')
+  return { question, status: 'no viable design', decision: null, considered }
+}
+
+// The pick is limited to the designs with no fatal objection.
+const DECISION = {
+  type: 'object',
+  required: ['choice', 'why', 'borrowed', 'risks', 'nextSteps'],
+  properties: {
+    choice: { type: 'string', enum: [...new Set(viable.map((e) => e.proposal.name))] },
+    why: { type: 'string' },
+    borrowed: { type: 'array', items: { type: 'string' } },
+    risks: { type: 'array', items: { type: 'string' } },
+    nextSteps: { type: 'array', items: { type: 'string' } },
+  },
+}
+
 const decision = await agent(
   `Decide a design question from the rival proposals and the objections raised against each.
 
@@ -95,18 +111,18 @@ ${entries
     (e) => `## ${e.proposal.name} (${e.angle})
 Design: ${e.proposal.design}
 Tradeoffs: ${e.proposal.tradeoffs}
-Fatal objection found: ${e.attack.fatal}
+${
+  e.attack
+    ? `Fatal objection found: ${e.attack.fatal}
 Objections:
-${e.attack.objections.map((o) => `- ${o}`).join('\n')}`,
+${e.attack.objections.map((o) => `- ${o}`).join('\n')}`
+    : 'Not attacked: the falsifier did not return. Treat this design as untested.'
+}`,
   )
   .join('\n\n')}
 
-Pick the strongest design that has no fatal objection. Borrow specific ideas from the others where they fix its weaknesses. List the objections that still apply as risks. Do not edit any files.`,
+Pick the strongest of these designs, which have no fatal objection: ${viable.map((e) => e.proposal.name).join('; ')}. A design with a fatal objection is ruled out, but you may borrow from it. Borrow specific ideas from the others where they fix the pick's weaknesses. List the objections that still apply as risks. Do not edit any files.`,
   { schema: DECISION, label: 'decide', phase: 'Decide' },
 )
 
-return {
-  question,
-  decision,
-  considered: entries.map((e) => ({ name: e.proposal.name, angle: e.angle, fatal: e.attack.fatal })),
-}
+return { question, status: decision ? 'decided' : 'the decider did not return', decision, considered }
