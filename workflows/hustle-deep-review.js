@@ -33,13 +33,21 @@ const LENSES = [
   },
   {
     key: 'missing',
-    prompt: 'Find what a reader needs that is absent: undefined terms, requirements with no way to verify them, promised work with no cost or owner, timelines that do not fit the scope.',
+    prompt: 'Find what a reader needs that is absent: undefined terms, requirements with no way to verify them, promised work with no cost or owner, timelines that do not fit the scope, and acceptance criteria with no finite list of cases to check (for example "handles all inputs" or "every edge case" with no list).',
   },
   {
     key: 'clarity',
     prompt: 'Find where a reader stalls: references to things never introduced, pronouns with unclear antecedents, jargon, buried main points, sentences that need rereading.',
   },
 ]
+
+// One definition of severity, given to the reviewer and the skeptic alike.
+const SEVERITY = `Severity:
+- high: a builder following the document as written builds the wrong thing, or ships a defect its checks would not catch.
+- medium: a builder would have to stop and ask, or guess, but the checks would catch a wrong guess.
+- low: everything else, including wording, clarity and polish.
+Use high only when you can name the wrong thing that would be built or the defect that would ship.
+A check that is weaker than the outcome it guards is not high on its own: when a builder doing what the document says would still build the right thing, it is medium.`
 
 const FINDINGS = {
   type: 'object',
@@ -63,10 +71,11 @@ const FINDINGS = {
 
 const VERDICT = {
   type: 'object',
-  required: ['refuted', 'reason'],
+  required: ['refuted', 'reason', 'severity'],
   properties: {
     refuted: { type: 'boolean' },
     reason: { type: 'string' },
+    severity: { type: 'string', enum: ['high', 'medium', 'low'] },
   },
 }
 
@@ -78,7 +87,13 @@ const reviewed = await pipeline(
 
 Your angle: ${lens.prompt}
 
-Stay on your angle. For each finding, quote the exact text, state the problem, rate its severity, and propose a fix. Report only findings you can support from the quoted text; a skeptic will try to refute each one. Do not edit any files.`,
+Stay on your angle. For each finding, quote the exact text, state the problem, rate its severity, and propose a fix.
+
+Report only findings you can support from the quoted text; a skeptic will try to refute each one.
+
+${SEVERITY}
+
+Do not edit any files.`,
       { schema: FINDINGS, label: `review: ${lens.key}`, phase: 'Review' },
     ),
   (result, lens) =>
@@ -89,8 +104,14 @@ Stay on your angle. For each finding, quote the exact text, state the problem, r
 
 Quoted text: ${f.quote}
 Reported problem: ${f.problem}
+Reported severity: ${f.severity}
 
-The finding is refuted if the problem is not real, is already addressed elsewhere in the document, or is a matter of taste rather than a defect. If you are uncertain, set refuted to true. Do not edit any files.`,
+The finding is refuted if the problem is not real, is already addressed elsewhere in the document, or is a matter of taste rather than a defect. If you are uncertain, set refuted to true.
+
+Whether or not you refute it, rate the severity the problem really has. Do not raise it above the reported severity.
+${SEVERITY}
+
+Do not edit any files.`,
           { schema: VERDICT, label: `refute: ${lens.key}`, phase: 'Refute' },
         ).then((v) => ({ ...f, lens: lens.key, verdict: v })),
       ),
@@ -99,6 +120,10 @@ The finding is refuted if the problem is not real, is already addressed elsewher
 
 const all = reviewed.filter(Boolean).flat().filter(Boolean)
 const RANK = { high: 0, medium: 1, low: 2 }
+// Keep the lower of the reviewer's and the skeptic's severity.
+for (const f of all) {
+  if (f.verdict && RANK[f.verdict.severity] > RANK[f.severity]) f.severity = f.verdict.severity
+}
 const bySeverity = (a, b) => RANK[a.severity] - RANK[b.severity]
 const survivors = all.filter((f) => f.verdict && !f.verdict.refuted).sort(bySeverity)
 const refuted = all.filter((f) => f.verdict && f.verdict.refuted).sort(bySeverity)

@@ -38,14 +38,38 @@ const PLAN = {
   },
 }
 
+const PROBLEM = {
+  type: 'object',
+  required: ['class', 'problem'],
+  properties: {
+    class: { type: 'string', enum: ['blocking', 'follow_up'] },
+    problem: { type: 'string' },
+  },
+}
+
 const GATE = {
   type: 'object',
   required: ['pass', 'problems'],
   properties: {
     pass: { type: 'boolean' },
-    problems: { type: 'array', items: { type: 'string' } },
+    problems: { type: 'array', items: PROBLEM },
   },
 }
+
+// The blocking bar from the hustle-verifier agent; only blocking problems fail a gate.
+const BAR = `A problem blocks only when all of these hold:
+- You are certain it is real (at least 80 out of 100) and demonstrated it.
+- It cites what it breaks: a requirement or acceptance criterion, an existing test or behaviour, or a policy or sandbox rule. Problems that predate the change count too, in code it touches or depends on.
+- It is at least medium severity and not a rare edge case, unless it is a security or data-loss problem, which blocks however rare.
+- On a retry: it is an earlier blocking problem still unfixed, or it is in code the new diff changed.
+- The change can fix it. A setting outside the repository, or a limit of your own environment, goes in your summary, not in problems.
+
+Never flag correct code that looks wrong, nitpicks a senior engineer would skip, what a linter or existing test already catches, or style and hardening the criteria do not ask for.
+
+Report each problem with class "blocking" or "follow_up". Only blocking problems fail the check; when only follow_up problems remain, pass it.`
+const blocking = (g) => g.problems.filter((p) => p.class === 'blocking')
+const gatePassed = (g) => blocking(g).length === 0
+const describe = (p) => `[${p.class}] ${p.problem}`
 
 // The script cannot run git itself, so an agent runs one fixed command and reports its output.
 // The script, not the agent, compares the two snapshots with the plan.
@@ -125,11 +149,15 @@ if (plan.status === 'all_done') {
   const final = await agent(
     `Every milestone in ${SPEC} is recorded as passed. Perform the final check.
 Rerun every acceptance criterion and every verification command in ${SPEC} yourself. Do not trust ${PROGRESS}.
-Fail on anything that does not hold. Do not edit any files.`,
+Fail on anything that does not hold.
+
+${BAR}
+
+Do not edit any files.`,
     { schema: GATE, label: 'final check' },
   )
   if (!final) return { status: 'final check did not return', problems: [] }
-  return { status: final.pass ? 'complete' : 'final check failed', problems: final.problems }
+  return { status: gatePassed(final) ? 'complete' : 'final check failed', problems: final.problems.map(describe) }
 }
 
 phase('Build')
@@ -184,13 +212,19 @@ const gates = await parallel([
   () =>
     agent(
       `CRITIC. ${ctx}
-Review the code for correctness, completeness, robustness, and fit with the existing interfaces. Do not edit any files.`,
+Review the code for correctness, completeness, robustness, and fit with the existing interfaces.
+
+${BAR}
+
+Do not edit any files.`,
       { schema: GATE, label: 'critic', phase: 'Check' },
     ),
   () =>
     agent(
       `CHALLENGER. ${ctx}
-Write adversarial tests for this milestone: edge cases, failure paths, worst-case inputs. Put them in a new file or folder named "adversarial" inside the project's existing test directory. Do not modify source code. Run your tests and report each failure as a problem.`,
+Write adversarial tests for this milestone: edge cases, failure paths, worst-case inputs. Put them in a new file or folder named "adversarial" inside the project's existing test directory. Do not modify source code. Run your tests and report each failure as a problem.
+
+${BAR}`,
       { schema: GATE, label: 'challenger', phase: 'Check' },
     ),
   () =>
@@ -199,20 +233,28 @@ Write adversarial tests for this milestone: edge cases, failure paths, worst-cas
 Worker reports:
 ${reports.filter(Boolean).join('\n---\n')}
 
-Rerun every command the workers claim to have run and compare the output. Fail on any mismatch, any mocked or skipped test passed off as real, any facade implementation, and any off-limits shortcut. Do not edit any files.`,
+Rerun every command the workers claim to have run and compare the output. Fail on any mismatch, any mocked or skipped test passed off as real, any facade implementation, and any off-limits shortcut.
+
+${BAR}
+
+Do not edit any files.`,
       { schema: GATE, label: 'auditor', phase: 'Check' },
     ),
 ])
 
 const results = gates.filter(Boolean)
-const problems = [...ownership, ...results.flatMap((g) => g.problems)]
-const passed = !ownership.length && results.length === 3 && results.every((g) => g.pass)
+// Ownership problems always block; gate problems block only when classed blocking.
+const problems = [
+  ...ownership.map((problem) => describe({ class: 'blocking', problem })),
+  ...results.flatMap((g) => g.problems.map(describe)),
+]
+const passed = !ownership.length && results.length === 3 && results.every(gatePassed)
 if (results.length < 3) log(`${3 - results.length} check(s) did not return; the milestone is recorded as failed.`)
 
 // The script writes the entry; the agent only appends it. The planner reads the Result line.
 const entry = `## ${plan.milestone}
 Result: ${passed ? 'PASSED' : 'FAILED'}
-Problems:
+Problems (blocking problems fail the milestone; follow_up problems do not):
 ${problems.length ? problems.map((p) => `- ${p.replace(/\s*\n\s*/g, ' ')}`).join('\n') : '- none'}`
 
 phase('Record')

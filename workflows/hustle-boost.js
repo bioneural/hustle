@@ -38,10 +38,33 @@ const ROUND = {
   type: 'object',
   required: ['flaws', 'summary'],
   properties: {
-    flaws: { type: 'array', items: { type: 'string' } },
+    flaws: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['class', 'flaw'],
+        properties: {
+          class: { type: 'string', enum: ['blocking', 'follow_up'] },
+          flaw: { type: 'string' },
+        },
+      },
+    },
     summary: { type: 'string' },
   },
 }
+
+// The blocking bar from the hustle-verifier agent; only blocking flaws keep a round from counting as clean.
+const BAR = `A flaw blocks only when all of these hold:
+- You are certain it is real (at least 80 out of 100) and demonstrated it.
+- It cites what it breaks: one of the requirements above, an existing test or behaviour, or a policy or sandbox rule. Problems that predate the change count too, in code it touches or depends on.
+- It is at least medium severity and not a rare edge case, unless it is a security or data-loss problem, which blocks however rare.
+- On a retry: it is an earlier blocking problem still unfixed, or it is in code the new diff changed.
+- The change can fix it. A setting outside the repository, or a limit of your own environment, goes in your summary, not in flaws.
+
+Never flag correct code that looks wrong, nitpicks a senior engineer would skip, what a linter or existing test already catches, or style and hardening the criteria do not ask for.
+
+Report each flaw with class "blocking" or "follow_up". Fix only blocking flaws; list follow_up flaws without fixing them. A round with only follow_up flaws counts as clean.`
+const FOLLOW_UPS = []
 
 const VERDICT = {
   type: 'object',
@@ -98,7 +121,10 @@ Current state of the change:
 ${summary}
 
 Attack it. Look for edge cases, concurrency problems, failure paths, worst-case inputs, and requirements it does not meet. Read the actual diff and code; do not trust the summary.
-For every real flaw: fix it, then rerun the tests.
+
+${BAR}
+
+For every blocking flaw: fix it, then rerun the tests.
 Report each flaw you found (an empty list if none), and an updated summary of the change including every command you ran with its real output.`,
       { schema: ROUND, label: `attack ${round}`, phase: 'Attack' },
     )
@@ -106,14 +132,16 @@ Report each flaw you found (an empty list if none), and an updated summary of th
       log(`Round ${round} did not return. Stopping the attack early.`)
       break
     }
-    if (r.flaws.length) {
+    const blockers = r.flaws.filter((f) => f.class === 'blocking')
+    FOLLOW_UPS.push(...r.flaws.filter((f) => f.class !== 'blocking').map((f) => f.flaw))
+    if (blockers.length) {
       clean = 0
-      flawsFound += r.flaws.length
+      flawsFound += blockers.length
       summary = r.summary
     } else {
       clean++
     }
-    log(`Round ${round}: ${r.flaws.length} flaw(s) found`)
+    log(`Round ${round}: ${blockers.length} blocking flaw(s), ${r.flaws.length - blockers.length} follow-up(s)`)
   }
   if (clean < CLEAN_ROUNDS_TO_STOP && round >= MAX_ROUNDS) {
     log(`Stopped at the ${MAX_ROUNDS}-round limit before two clean rounds in a row. Treat the result with caution.`)
@@ -150,4 +178,4 @@ ${failures.map((f) => `- ${f}`).join('\n')}`
 }
 
 const status = verified ? 'verified' : verdict ? 'failed verification' : 'not verified'
-return { task, status, rounds: round, flawsFound, stoppedClean: clean >= CLEAN_ROUNDS_TO_STOP, verdict }
+return { task, status, rounds: round, flawsFound, followUps: FOLLOW_UPS, stoppedClean: clean >= CLEAN_ROUNDS_TO_STOP, verdict }
