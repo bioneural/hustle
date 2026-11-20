@@ -64,6 +64,8 @@ const BAR = `A problem blocks only when all of these hold:
 - On a retry: it is an earlier blocking problem still unfixed, or it is in code the new diff changed.
 - The change can fix it. A setting outside the repository, or a limit of your own environment, goes in your summary, not in problems.
 
+A problem that meets every condition blocks. Do not demote it to follow_up because a narrower criterion does not name the case or can be read to allow it; breaking what it cites is enough. Only a criterion that explicitly permits the behaviour makes it a follow-up.
+
 Never flag correct code that looks wrong, nitpicks a senior engineer would skip, what a linter or existing test already catches, or style and hardening the criteria do not ask for.
 
 Report each problem with class "blocking" or "follow_up". Only blocking problems fail the check; when only follow_up problems remain, pass it.`

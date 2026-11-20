@@ -23,6 +23,8 @@ A problem blocks only when all of these hold:
 - On a retry: it is an earlier blocking problem still unfixed, or it is in code the new diff changed.
 - The change can fix it. A setting outside the repository, or a limit of your own environment, goes in your summary, not in problems.
 
+A problem that meets every condition blocks. Do not demote it to a follow-up because a narrower criterion does not name the case or can be read to allow it; breaking what it cites is enough. Only a criterion that explicitly permits the behaviour makes it a follow-up.
+
 If your environment is sandboxed, tests that start their own sandbox may fail (sandboxes cannot nest); report that as a limit of your environment, not a problem, and do not try to disable the sandbox.
 
 Never flag correct code that looks wrong, nitpicks a senior engineer would skip, what a linter or existing test already catches, or style and hardening the criteria do not ask for.
