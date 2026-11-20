@@ -53,7 +53,7 @@ Use it when a problem is hard rather than broad. Broad work belongs in an ordina
 
 ### `/hustle-deep-review`
 
-Four reviewers read a document, each from one angle: facts, logic, what is missing, and where a reader stalls. A skeptic then tries to refute every finding. Reviewers and the skeptic share one definition of severity; the skeptic can lower a finding's severity but not raise it. Findings that survive are reported, ranked by severity. Refuted findings are listed apart with the skeptic's reason, as are any the skeptic did not check.
+Four reviewers read a document, each from one angle: facts, logic, what is missing, and where a reader stalls. When all four are done, findings that quote the same text are merged into one, listing every angle that found it. A skeptic then tries to refute each merged finding, so one problem costs one skeptic. Reviewers and the skeptic share one definition of severity; the skeptic can lower a finding's severity but not raise it. Findings that survive are reported, ranked by severity. Refuted findings are listed apart with the skeptic's reason, as are any the skeptic did not check.
 
 ```
 Run /hustle-deep-review on proposal.md
@@ -213,7 +213,7 @@ Agent teams are an experimental Claude Code feature. Their behavior may change.
 | Path | Function |
 |---|---|
 | `workflows/hustle-boost.js` | Fix, then rounds of fresh attackers, then verification |
-| `workflows/hustle-deep-review.js` | Four reviewers by angle; a skeptic refutes each finding |
+| `workflows/hustle-deep-review.js` | Four reviewers by angle; duplicates merged; a skeptic refutes each finding |
 | `workflows/hustle-design-panel.js` | Rival designs, each attacked, then a decision |
 | `workflows/hustle-teamwork.js` | One milestone per run: plan, build, check, record |
 | `skills/hustle-scope/SKILL.md` | Interview that writes `SPEC.md` |
